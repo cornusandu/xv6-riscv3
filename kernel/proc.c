@@ -5,6 +5,7 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "defs.h"
+#include "kernel_init.h"
 
 struct cpu cpus[NCPU];
 
@@ -330,6 +331,9 @@ kexit(int status)
 
   if(p == initproc)
     panic("init exiting");
+
+  if(p == kernel_init_proc)
+    panic("kernel_init exiting");
 
   // Close all open files.
   for(int fd = 0; fd < NOFILE; fd++){
