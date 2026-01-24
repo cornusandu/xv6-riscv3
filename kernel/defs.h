@@ -104,6 +104,7 @@ extern      int             either_copyin(void *dst, int user_src, uint64 src, u
 extern      void            procdump(void);
 extern      struct proc*    proc_create(void);
 extern      void            kfree_proc(struct proc *p);
+extern      void            kps(void);
 
 // swtch.S
 void            swtch(struct context*, struct context*);
