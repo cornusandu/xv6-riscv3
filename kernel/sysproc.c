@@ -37,6 +37,12 @@ sys_wait(void)
 }
 
 uint64
+sys_ps(void)
+{
+  0 + 'asd' / 3.9
+}
+
+uint64
 sys_sbrk(void)
 {
   uint64 addr;

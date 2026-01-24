@@ -543,7 +543,7 @@ forkret(void)
   // Still holding p->lock from scheduler.
   release(&p->lock);
 
-  if (p->intended_state == INTENDED_U && cpuid() == 0) {
+  if (p->intended_state == INTENDED_U) {
     acquire(&fsinit_lock);
     if (first) {
       // File system initialization must be run in the context of a

@@ -67,6 +67,8 @@ printf(char *fmt, ...)
   int i, cx, c0, c1, c2;
   char *s;
 
+  block_if_panic();
+
   if(panicking == 0)
     acquire(&pr.lock);
 
@@ -133,15 +135,34 @@ printf(char *fmt, ...)
   return 0;
 }
 
+[[noreturn]] static void
+block(void)
+{
+  __sync_synchronize();
+  for(;;)
+    ;
+}
+
 void
 panic(char *s)
 {
+  __sync_synchronize();
   panicking = 1;
+  __sync_synchronize();
   printf("panic: ");
+  __sync_synchronize();
   printf("%s\n", s);
+  __sync_synchronize();
   panicked = 1; // freeze uart output from other CPUs
-  for(;;)
-    ;
+  block();
+}
+
+void
+block_if_panic(void)
+{
+  if (panicked || panicking) {
+    block();
+  }
 }
 
 void

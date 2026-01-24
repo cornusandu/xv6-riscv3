@@ -150,7 +150,7 @@ kernel_reaper_main(void)
     for (uint64 i = 0; i < NPROC; i++) {
       if (proc[i].pid == my_pid) continue;
       //acquire(&proc[i].lock);
-      if (proc[i].parent == 0x0) {release(&proc[i].lock); continue;};
+      if (proc[i].parent == 0x0) {continue;};
       if (proc[i].parent->pid == my_pid) {
         child_pids[i] = proc[i].pid;
       } else {
