@@ -26,6 +26,7 @@ extern char trampoline[]; // trampoline.S
 // memory model when using p->parent.
 // must be acquired before any p->lock.
 struct spinlock wait_lock;
+struct spinlock fsinit_lock;
 
 // Allocate a page for each process's kernel stack.
 // Map it high in memory, followed by an invalid
@@ -50,8 +51,13 @@ procinit(void)
 {
   struct proc *p;
   
+  printf("procinit: initializing state\n");
+  if (cpuid() != 0) {
+    panic("procinit: attempted initialization on non-primary hart");
+  }
   initlock(&pid_lock, "nextpid");
   initlock(&wait_lock, "wait_lock");
+  initlock(&fsinit_lock, "fsinit");
   for(p = proc; p < &proc[NPROC]; p++) {
       initlock(&p->lock, "proc");
       p->state = UNUSED;
@@ -133,6 +139,8 @@ found:
     return 0;
   }
 
+  memset(p->trapframe, 0, PGSIZE);   // <-- ADD THIS
+
   // An empty user page table.
   p->pagetable = proc_pagetable(p);
   if(p->pagetable == 0){
@@ -147,7 +155,15 @@ found:
   p->context.ra = (uint64)forkret;
   p->context.sp = p->kstack + PGSIZE;
 
+  p->intended_state = INTENDED_U;
+
   return p;
+}
+
+struct proc*
+proc_create(void)
+{
+  return allocproc();
 }
 
 // free a proc structure and the data hanging from it,
@@ -170,6 +186,10 @@ freeproc(struct proc *p)
   p->killed = 0;
   p->xstate = 0;
   p->state = UNUSED;
+}
+
+void kfree_proc(struct proc *p) {
+  freeproc(p);
 }
 
 // Create a user page table for a given process, with no user memory,
@@ -428,6 +448,9 @@ kwait(uint64 addr)
 void
 scheduler(void)
 {
+  extern void kernelvec(void);
+  w_stvec((uint64)kernelvec);
+
   struct proc *p;
   struct cpu *c = mycpu();
 
@@ -509,6 +532,10 @@ yield(void)
 void
 forkret(void)
 {
+  extern char trampoline[];
+  extern char uservec[];
+  extern void kernelvec(void);
+
   extern char userret[];
   static int first = 1;
   struct proc *p = myproc();
@@ -516,26 +543,41 @@ forkret(void)
   // Still holding p->lock from scheduler.
   release(&p->lock);
 
-  if (first) {
-    // File system initialization must be run in the context of a
-    // regular process (e.g., because it calls sleep), and thus cannot
-    // be run from main().
-    fsinit(ROOTDEV);
-
-    first = 0;
-    // ensure other cores see first=0.
-    __sync_synchronize();
-
-    // We can invoke kexec() now that file system is initialized.
-    // Put the return value (argc) of kexec into a0.
-    p->trapframe->a0 = kexec("/init", (char *[]){ "/init", 0 });
-    if (p->trapframe->a0 == -1) {
-      panic("exec");
+  if (p->intended_state == INTENDED_U && cpuid() == 0) {
+    acquire(&fsinit_lock);
+    if (first) {
+      // File system initialization must be run in the context of a
+      // regular process (e.g., because it calls sleep), and thus cannot
+      // be run from main().
+      release(&fsinit_lock);
+      fsinit(ROOTDEV);
+      first = 0;
+      // ensure other cores see first=0.
+      __sync_synchronize();
+      // We can invoke kexec() now that file system is initialized.
+      // Put the return value (argc) of kexec into a0.
+      p->trapframe->a0 = kexec("/init", (char *[]){ "/init", 0 });
+      if (p->trapframe->a0 == -1) {
+        panic("exec");
+      }
+    }
+    if (holding(&fsinit_lock)) {
+      release(&fsinit_lock);
     }
   }
 
+  if (p->intended_state != INTENDED_U && p->intended_state != INTENDED_S) panic("forkret: Invalid process intended state value.\n");
+
+  if (p->intended_state == INTENDED_S) {
+    prepare_return();
+    asm volatile ("sret");
+    panic("forkret: failed to initialise INTENDED_S process;\nforkret: sret returned;");
+  }
+
   // return to user space, mimicing usertrap()'s return.
+  w_stvec(TRAMPOLINE + (uservec - trampoline));
   prepare_return();
+
   uint64 satp = MAKE_SATP(p->pagetable);
   uint64 trampoline_userret = TRAMPOLINE + (userret - trampoline);
   ((void (*)(uint64))trampoline_userret)(satp);

@@ -20,17 +20,22 @@ init_early(void)
 void
 init_hardware(void)
 {
+  printf("init_hardware: Initialise RAM\n");
   kinit();         // physical page allocator
   kvminit();       // create kernel page table
   kvminithart();   // turn on paging
+  printf("init_hardware: Initialise processes\n");
   procinit();      // process table
+  printf("init_hardware: Initialise interrupts\n");
   trapinit();      // trap vectors
   trapinithart();  // install kernel trap vector
   plicinit();      // set up interrupt controller
   plicinithart();  // ask PLIC for device interrupts
+  printf("init_hardware: Initialise file system\n");
   binit();         // buffer cache
   iinit();         // inode table
   fileinit();      // file table
+  printf("\n\n");
 }
 
 // start() jumps here in supervisor mode on all CPUs.
@@ -44,7 +49,10 @@ main()
     init_hardware();
     printf("initialized hardware state\n\n");
     virtio_disk_init(); // emulated hard disk
+    printf("initialised emulated hard disk\n");
+    printf("entering userinit()\n");
     userinit();      // first user process
+    printf("exiting userinit()\n");
     kernel_init_create();
     __sync_synchronize();
     started = 1;

@@ -39,14 +39,22 @@ usertrap(void)
 {
   int which_dev = 0;
 
-  if((r_sstatus() & SSTATUS_SPP) != 0)
-    panic("usertrap: not from user mode");
+  struct proc *p = myproc();
+
+  if(((r_sstatus() & SSTATUS_SPP) != 0)) {
+    if (p != 0x0) {
+      if (p->intended_state != INTENDED_S) {
+        printf("panic: usertrap: not from user mode (process with INTENDED_U); PID=%d, CPU=%d; proc_name=%s\n", p->pid, cpuid(), p->name);
+        panic("usertrap: invalid state;");
+      }
+    }
+    else
+      panic("usertrap: not from user mode (non-process kernel code)");
+  }
 
   // send interrupts and exceptions to kerneltrap(),
   // since we're now in the kernel.
   w_stvec((uint64)kernelvec);  //DOC: kernelvec
-
-  struct proc *p = myproc();
   
   // save user program counter.
   p->trapframe->epc = r_sepc();
@@ -93,11 +101,13 @@ usertrap(void)
   return satp;
 }
 
+void kerneltrap();
+
 //
 // set up trapframe and control registers for a return to user space
 //
 void
-prepare_return(void)
+prepare_return()
 {
   struct proc *p = myproc();
 
@@ -106,28 +116,55 @@ prepare_return(void)
   // code to usertrap would be a disaster, turn off interrupts.
   intr_off();
 
-  // send syscalls, interrupts, and exceptions to uservec in trampoline.S
-  uint64 trampoline_uservec = TRAMPOLINE + (uservec - trampoline);
-  w_stvec(trampoline_uservec);
-
   // set up trapframe values that uservec will need when
   // the process next traps into the kernel.
   p->trapframe->kernel_satp = r_satp();         // kernel page table
   p->trapframe->kernel_sp = p->kstack + PGSIZE; // process's kernel stack
-  p->trapframe->kernel_trap = (uint64)usertrap;
+  if (p->intended_state == INTENDED_U)
+    p->trapframe->kernel_trap = (uint64)usertrap;
+  else
+    p->trapframe->kernel_trap = (uint64)kerneltrap;
   p->trapframe->kernel_hartid = r_tp();         // hartid for cpuid()
+
+  if (p->intended_state == INTENDED_U) goto user_path;
+  else if (p->intended_state == INTENDED_S) goto kernel_path;
+  else panic("prepare_return: failed to parse process state;\nprepare_return: process intended state holds invalid value");
+
+  uint64 x;
+
+  user_path:
+  // send syscalls, interrupts, and exceptions to uservec in trampoline.S
+  uint64 trampoline_uservec = TRAMPOLINE + (uservec - trampoline);
+  w_stvec(trampoline_uservec);
+
 
   // set up the registers that trampoline.S's sret will use
   // to get to user space.
   
   // set S Previous Privilege mode to User.
-  unsigned long x = r_sstatus();
-  x &= ~SSTATUS_SPP; // clear SPP to 0 for user mode
+  x = r_sstatus();
+  if (p->intended_state != INTENDED_S) {
+    x &= ~SSTATUS_SPP; // clear SPP to 0 for user mode
+  } else {
+    x |= SSTATUS_SPP;
+  }
   x |= SSTATUS_SPIE; // enable interrupts in user mode
   w_sstatus(x);
 
   // set S Exception Program Counter to the saved user pc.
   w_sepc(p->trapframe->epc);
+  return;
+
+  kernel_path:
+  w_stvec((uint64)kernelvec);
+
+  x = r_sstatus();
+  x |= SSTATUS_SPP;      // return to supervisor
+  x |= SSTATUS_SPIE;
+  w_sstatus(x);
+
+  w_sepc(p->trapframe->epc);
+  return;
 }
 
 // interrupts and exceptions from kernel code go here via kernelvec,

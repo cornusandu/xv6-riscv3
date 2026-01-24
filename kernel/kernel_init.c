@@ -1,18 +1,67 @@
-#include "defs.h"
 #include "types.h"
 #include "riscv.h"
 #include "param.h"
 #include "spinlock.h"
+#include "defs.h"
 #include "kernel_init.h"
 #include "proc.h"
 
 extern struct proc proc[NPROC];
+
+extern struct spinlock wait_lock;
 
 extern void kernel_reaper_main(void);
 
 static uint64 child_pids[NPROC];
 
 struct spinlock access_lock;
+
+struct proc *kernel_init_proc = 0x0;
+
+
+int
+kwait_nonblocking(uint64 addr)
+{
+  struct proc *pp;
+  struct proc *p = myproc();
+  int havekids = 0;
+  int pid = 0;
+
+  acquire(&wait_lock);
+
+  for (pp = proc; pp < &proc[NPROC]; pp++) {
+    if (pp->parent == p) {
+      havekids = 1;
+
+      acquire(&pp->lock);
+      if (pp->state == ZOMBIE) {
+        pid = pp->pid;
+        if (addr != 0 &&
+            copyout(p->pagetable, addr,
+                    (char *)&pp->xstate,
+                    sizeof(pp->xstate)) < 0) {
+          release(&pp->lock);
+          release(&wait_lock);
+          return -1;
+        }
+        kfree_proc(pp);
+        release(&pp->lock);
+        release(&wait_lock);
+        return pid;
+      }
+      release(&pp->lock);
+    }
+  }
+
+  release(&wait_lock);
+
+  if (!havekids || killed(p))
+    return -1;
+
+  return 0;   // children exist, none exited yet
+}
+
+
 
 uint64*
 get_child_pids(void)
@@ -59,19 +108,29 @@ kernel_init_create(void)
 {
   initlock(&access_lock, "access_lock");
 
+  printf("kernel_init_create: Initialising process\n");
   struct proc *reaper;
-  reaper = allocproc();
-
-  acquire(&reaper->lock);
-
+  reaper = proc_create();
   reaper->cwd = namei("/");
-  reaper->context.ra = (uint64)kernel_reaper_main;
+
+  reaper->trapframe->epc = (uint64)kernel_reaper_main;
   reaper->context.sp = reaper->kstack + PGSIZE;
   reaper->state = RUNNABLE;
+  reaper->intended_state = INTENDED_S;
+  
+  printf("kernel_init_create: Preparing kernel execution context\n");
+  extern void kernelvec(void);
+  w_stvec((uint64)kernelvec);
+
+  uint64 s = r_sstatus();
+  s |= SSTATUS_SPP;   // set bit 8
+  w_sstatus(s);
 
   release(&reaper->lock);
 
   kernel_init_proc = reaper;
+
+  printf("kernel_init_create: Process scheduled for execution\n");
 }
 
 void
@@ -81,22 +140,25 @@ kernel_reaper_main(void)
   uint64 my_pid = myproc()->pid;
 
   for(;;){
-    int result = kwait(0);
+    int result = kwait_nonblocking(0);
     if (result == -1) {
       ksleep(10);
     }
 
     acquire(&access_lock);
+    acquire(&wait_lock);
     for (uint64 i = 0; i < NPROC; i++) {
-      acquire(&proc[i].lock);
+      if (proc[i].pid == my_pid) continue;
+      //acquire(&proc[i].lock);
       if (proc[i].parent == 0x0) {release(&proc[i].lock); continue;};
       if (proc[i].parent->pid == my_pid) {
         child_pids[i] = proc[i].pid;
       } else {
         child_pids[i] = 0;
       }
-      release(&proc[i].lock);
+      //release(&proc[i].lock);
     }
     release(&access_lock);
+    release(&wait_lock);
   }
 }

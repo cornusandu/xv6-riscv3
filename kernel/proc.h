@@ -106,5 +106,13 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+
+  unsigned char intended_state;         // 0=User; 1=Kernel
 };
+
+enum IntendedStateEnum : char {
+  INTENDED_U = 0,
+  INTENDED_S = 1
+};
+
 #endif
