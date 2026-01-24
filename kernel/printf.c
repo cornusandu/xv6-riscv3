@@ -160,7 +160,7 @@ panic(char *s)
 void
 block_if_panic(void)
 {
-  if (panicked || panicking) {
+  if (panicked) {
     block();
   }
 }

@@ -6,6 +6,7 @@
 #include "sleeplock.h"
 #include "fs.h"
 #include "buf.h"
+#include "log.h"
 
 // Simple logging that allows concurrent FS system calls.
 //
@@ -32,10 +33,7 @@
 
 // Contents of the header block, used for both the on-disk header block
 // and to keep track in memory of logged block# before commit.
-struct logheader {
-  int n;
-  int block[LOGBLOCKS];
-};
+
 
 struct log {
   struct spinlock lock;
@@ -53,9 +51,6 @@ static void commit();
 void
 initlog(int dev, struct superblock *sb)
 {
-  if (sizeof(struct logheader) >= BSIZE)
-    panic("initlog: too big logheader");
-
   initlock(&log.lock, "log");
   log.start = sb->logstart;
   log.dev = dev;

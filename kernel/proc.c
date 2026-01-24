@@ -734,3 +734,28 @@ procdump(void)
     printf("\n");
   }
 }
+
+struct procdata pinfo(uint64 pid)
+{
+  for (uint64 i = 0; i < NPROC; i++) {
+    struct proc p = proc[i];
+    if (p.pid == pid) {
+      acquire(&p.lock);
+      struct procdata data;
+      data.pid = p.pid;
+      data.intended_state = p.intended_state;
+      data.killed = p.killed != 0;
+      memmove(data.name, p.name, 16);
+      data.parent_pid = p.parent != NULL ? p.parent->pid : 0;
+      data.state = p.state;
+      data.xstate = p.xstate;
+      release(&p.lock);
+      return data;
+    }
+  }
+
+  struct procdata data;
+  memset(&data, 0, sizeof(data));
+  data.pid = 0;
+  return data;
+}

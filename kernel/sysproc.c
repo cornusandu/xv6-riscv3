@@ -7,6 +7,8 @@
 #include "proc.h"
 #include "vm.h"
 
+extern struct proc proc[NPROC];
+
 uint64
 sys_exit(void)
 {
@@ -21,6 +23,75 @@ sys_getpid(void)
 {
   return myproc()->pid;
 }
+
+uint64 sys_pinfo(void)
+{
+  struct proc *p = myproc();
+  if (!p) {return -1;}
+
+  int pid;
+  argint(0, &pid);
+  uint64 result;
+  argaddr(1, &result);
+
+  struct procdata data = pinfo(pid);
+  
+  if (p->pid == 1)                     goto goto_skip_checks;
+  if (p->intended_state == INTENDED_S) goto goto_skip_checks;
+  if (pid == p->pid)                   goto goto_skip_checks;
+
+  if (data.parent_pid != p->pid) {
+    data.xstate = 0;
+    if (data.state == RUNNING) data.state = RUNNABLE;
+    if (data.state == USED)    data.state = RUNNABLE;
+    if (data.state == UNUSED)  data.state = ZOMBIE;
+  }
+
+  goto_skip_checks:
+
+  if (copyout(p->pagetable, result, (char*)&data, sizeof(data)) < 0) {
+    return -1;
+  };
+
+  return 0;
+}
+
+uint64 sys_ps(void)
+{
+  struct proc *p = myproc();
+  if (!p) {return -1;}
+
+  uint64 result;
+  argaddr(0, &result);
+  uint64 upper_bound;  //  max output lenght in bytes
+  argaddr(1, &upper_bound);
+  if (upper_bound == 0) {upper_bound--;}
+
+  uint64 counter = 0;
+
+  for (uint64 i = 0; i < NPROC; i++) {
+    struct proc *process = &proc[i];
+
+    acquire(&process->lock);
+
+    if (process->pid > 0 && \
+        process->state != ZOMBIE && \
+        process->state != UNUSED) {
+
+      if (copyout(p->pagetable, result + counter, (char*)&process->pid, sizeof(process->pid)) < 0) {
+        release(&process->lock);
+        return -1;
+      };
+      counter += sizeof(process->pid);
+      if (counter + sizeof(int) > upper_bound * sizeof(int))
+        {release(&process->lock); return 1;};
+    }
+
+    release(&process->lock);
+  }
+
+  return 0;
+};
 
 uint64
 sys_fork(void)

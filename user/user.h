@@ -1,6 +1,18 @@
 #define SBRK_ERROR ((char *)-1)
 
+#include "kernel/types.h"
+
 struct stat;
+enum procstate { UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
+struct procdata {
+  int pid;
+  int parent_pid;
+  int xstate;
+  enum procstate state;
+  unsigned char killed;
+  char name[16];
+  unsigned char intended_state;
+};
 
 // system calls
 int fork(void);
@@ -24,6 +36,8 @@ int getpid(void);
 char* sys_sbrk(int,int);
 int pause(int);
 int uptime(void);
+int ps(int* result, uint64 max_results);
+int pinfo(int pid, struct procdata* result);
 
 // ulib.c
 int stat(const char*, struct stat*);

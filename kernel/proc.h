@@ -1,5 +1,8 @@
 #ifndef IMPORT_PROCH
 #define IMPORT_PROCH
+
+#include "stddef.h"
+
 // Saved registers for kernel context switches.
 struct context {
   uint64 ra;
@@ -108,6 +111,16 @@ struct proc {
   char name[16];               // Process name (debugging)
 
   unsigned char intended_state;         // 0=User; 1=Kernel
+};
+
+struct procdata {
+  int pid;
+  int parent_pid;
+  int xstate;
+  enum procstate state;
+  unsigned char killed;
+  char name[16];
+  unsigned char intended_state;
 };
 
 enum IntendedStateEnum : char {

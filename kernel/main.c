@@ -1,6 +1,5 @@
 #include "types.h"
 #include "param.h"
-#include "memlayout.h"
 #include "riscv.h"
 #include "defs.h"
 #include "spinlock.h"
@@ -15,6 +14,7 @@ init_early(void)
   printfinit();
   printf("\n");
   printf("init_early() called\nEntered early state.\n");
+  run_asserts();
 }
 
 void
@@ -35,7 +35,7 @@ init_hardware(void)
   binit();         // buffer cache
   iinit();         // inode table
   fileinit();      // file table
-  printf("\n\n");
+  printf("\n");
 }
 
 // start() jumps here in supervisor mode on all CPUs.
@@ -45,9 +45,8 @@ main()
   if(cpuid() == 0){
     init_early();
     printf("xv6 kernel is booting\n");
-    printf("\n");
     init_hardware();
-    printf("initialized hardware state\n\n");
+    printf("initialized hardware state\n");
     virtio_disk_init(); // emulated hard disk
     printf("initialised emulated hard disk\n");
     printf("entering userinit()\n");

@@ -8,182 +8,188 @@ struct spinlock;
 struct sleeplock;
 struct stat;
 struct superblock;
+struct procdata;
+struct logheader;
 
 // bio.c
-void            binit(void);
-struct buf*     bread(uint, uint);
-void            brelse(struct buf*);
-void            bwrite(struct buf*);
-void            bpin(struct buf*);
-void            bunpin(struct buf*);
+extern  void            binit(void);
+extern  struct buf*     bread(uint, uint);
+extern  void            brelse(struct buf*);
+extern  void            bwrite(struct buf*);
+extern  void            bpin(struct buf*);
+extern  void            bunpin(struct buf*);
 
 // console.c
-void            consoleinit(void);
-void            consoleintr(int);
-void            consputc(int);
+extern  void            consoleinit(void);
+extern  void            consoleintr(int);
+extern  void            consputc(int);
 
 // exec.c
-int             kexec(char*, char**);
+extern  int             kexec(char*, char**);
 
 // file.c
-struct file*    filealloc(void);
-void            fileclose(struct file*);
-struct file*    filedup(struct file*);
-void            fileinit(void);
-int             fileread(struct file*, uint64, int n);
-int             filestat(struct file*, uint64 addr);
-int             filewrite(struct file*, uint64, int n);
+extern  struct file*    filealloc(void);
+extern  void            fileclose(struct file*);
+extern  struct file*    filedup(struct file*);
+extern  void            fileinit(void);
+extern  int             fileread(struct file*, uint64, int n);
+extern  int             filestat(struct file*, uint64 addr);
+extern  int             filewrite(struct file*, uint64, int n);
 
 // fs.c
-void            fsinit(int);
-int             dirlink(struct inode*, char*, uint);
-struct inode*   dirlookup(struct inode*, char*, uint*);
-struct inode*   ialloc(uint, short);
-struct inode*   idup(struct inode*);
-void            iinit();
-void            ilock(struct inode*);
-void            iput(struct inode*);
-void            iunlock(struct inode*);
-void            iunlockput(struct inode*);
-void            iupdate(struct inode*);
-int             namecmp(const char*, const char*);
-struct inode*   namei(char*);
-struct inode*   nameiparent(char*, char*);
-int             readi(struct inode*, int, uint64, uint, uint);
-void            stati(struct inode*, struct stat*);
-int             writei(struct inode*, int, uint64, uint, uint);
-void            itrunc(struct inode*);
-void            ireclaim(int);
+extern  void            fsinit(int);
+extern  int             dirlink(struct inode*, char*, uint);
+extern  struct inode*   dirlookup(struct inode*, char*, uint*);
+extern  struct inode*   ialloc(uint, short);
+extern  struct inode*   idup(struct inode*);
+extern  void            iinit();
+extern  void            ilock(struct inode*);
+extern  void            iput(struct inode*);
+extern  void            iunlock(struct inode*);
+extern  void            iunlockput(struct inode*);
+extern  void            iupdate(struct inode*);
+extern  int             namecmp(const char*, const char*);
+extern  struct inode*   namei(char*);
+extern  struct inode*   nameiparent(char*, char*);
+extern  int             readi(struct inode*, int, uint64, uint, uint);
+extern  void            stati(struct inode*, struct stat*);
+extern  int             writei(struct inode*, int, uint64, uint, uint);
+extern  void            itrunc(struct inode*);
+extern  void            ireclaim(int);
 
 // kalloc.c
-void*           kalloc(void);
-void            kfree(void *);
-void            kinit(void);
+extern  void*           kalloc(void);
+extern  void            kfree(void *);
+extern  void            kinit(void);
 
 // log.c
-void            initlog(int, struct superblock*);
-void            log_write(struct buf*);
-void            begin_op(void);
-void            end_op(void);
+extern  void            initlog(int, struct superblock*);
+extern  void            log_write(struct buf*);
+extern  void            begin_op(void);
+extern  void            end_op(void);
 
 // pipe.c
-int             pipealloc(struct file**, struct file**);
-void            pipeclose(struct pipe*, int);
-int             piperead(struct pipe*, uint64, int);
-int             pipewrite(struct pipe*, uint64, int);
+extern  int             pipealloc(struct file**, struct file**);
+extern  void            pipeclose(struct pipe*, int);
+extern  int             piperead(struct pipe*, uint64, int);
+extern  int             pipewrite(struct pipe*, uint64, int);
 
 // printf.c
-int             printf(char*, ...) __attribute__ ((format (printf, 1, 2)));
-void            panic(char*) __attribute__((noreturn));
-void            printfinit(void);
-void            block_if_panic(void);
+extern  int             printf(char*, ...) __attribute__ ((format (printf, 1, 2)));
+extern  void            panic(char*) __attribute__((noreturn));
+extern  void            printfinit(void);
+extern  void            block_if_panic(void);
 
 // proc.c
-extern      int             cpuid(void);
-extern      void            kexit(int);
-extern      int             kfork(void);
-extern      int             growproc(int);
-extern      void            proc_mapstacks(pagetable_t);
-extern      pagetable_t     proc_pagetable(struct proc *);
-extern      void            proc_freepagetable(pagetable_t, uint64);
-extern      int             kkill(int);
-extern      int             killed(struct proc*);
-extern      void            setkilled(struct proc*);
-extern      struct cpu*     mycpu(void);
-extern      struct proc*    myproc();
-extern      void            procinit(void);
-extern      void            scheduler(void) __attribute__((noreturn));
-extern      void            sched(void);
-extern      void            sleep(void*, struct spinlock*);
-extern      void            userinit(void);
-extern      int             kwait(uint64);
-extern      void            wakeup(void*);
-extern      void            yield(void);
-extern      int             either_copyout(int user_dst, uint64 dst, void *src, uint64 len);
-extern      int             either_copyin(void *dst, int user_src, uint64 src, uint64 len);
-extern      void            procdump(void);
-extern      struct proc*    proc_create(void);
-extern      void            kfree_proc(struct proc *p);
-extern      void            kps(void);
+extern  int               cpuid(void);
+extern  void              kexit(int);
+extern  int               kfork(void);
+extern  int               growproc(int);
+extern  void              proc_mapstacks(pagetable_t);
+extern  pagetable_t       proc_pagetable(struct proc *);
+extern  void              proc_freepagetable(pagetable_t, uint64);
+extern  int               kkill(int);
+extern  int               killed(struct proc*);
+extern  void              setkilled(struct proc*);
+extern  struct cpu*       mycpu(void);
+extern  struct proc*      myproc();
+extern  void              procinit(void);
+extern  void              scheduler(void) __attribute__((noreturn));
+extern  void              sched(void);
+extern  void              sleep(void*, struct spinlock*);
+extern  void              userinit(void);
+extern  int               kwait(uint64);
+extern  void              wakeup(void*);
+extern  void              yield(void);
+extern  int               either_copyout(int user_dst, uint64 dst, void *src, uint64 len);
+extern  int               either_copyin(void *dst, int user_src, uint64 src, uint64 len);
+extern  void              procdump(void);
+extern  struct proc*      proc_create(void);
+extern  void              kfree_proc(struct proc *);
+extern  void              kps(void);
+extern  struct procdata   pinfo(uint64);
 
 // swtch.S
-void            swtch(struct context*, struct context*);
+extern  void            swtch(struct context*, struct context*);
 
 // spinlock.c
-void            acquire(struct spinlock*);
-int             holding(struct spinlock*);
-void            initlock(struct spinlock*, char*);
-void            release(struct spinlock*);
-void            push_off(void);
-void            pop_off(void);
+extern  void            acquire(struct spinlock*);
+extern  int             holding(struct spinlock*);
+extern  void            initlock(struct spinlock*, char*);
+extern  void            release(struct spinlock*);
+extern  void            push_off(void);
+extern  void            pop_off(void);
 
 // sleeplock.c
-void            acquiresleep(struct sleeplock*);
-void            releasesleep(struct sleeplock*);
-int             holdingsleep(struct sleeplock*);
-void            initsleeplock(struct sleeplock*, char*);
+extern  void            acquiresleep(struct sleeplock*);
+extern  void            releasesleep(struct sleeplock*);
+extern  int             holdingsleep(struct sleeplock*);
+extern  void            initsleeplock(struct sleeplock*, char*);
 
 // string.c
-int             memcmp(const void*, const void*, uint);
-void*           memmove(void*, const void*, uint);
-void*           memset(void*, int, uint);
-char*           safestrcpy(char*, const char*, int);
-int             strlen(const char*);
-int             strncmp(const char*, const char*, uint);
-char*           strncpy(char*, const char*, int);
+extern  int             memcmp(const void*, const void*, uint);
+extern  void*           memmove(void*, const void*, uint);
+extern  void*           memset(void*, int, uint);
+extern  char*           safestrcpy(char*, const char*, int);
+extern  int             strlen(const char*);
+extern  int             strncmp(const char*, const char*, uint);
+extern  char*           strncpy(char*, const char*, int);
 
 // syscall.c
-void            argint(int, int*);
-int             argstr(int, char*, int);
-void            argaddr(int, uint64 *);
-int             fetchstr(uint64, char*, int);
-int             fetchaddr(uint64, uint64*);
-void            syscall();
+extern  void            argint(int, int*);
+extern  int             argstr(int, char*, int);
+extern  void            argaddr(int, uint64 *);
+extern  int             fetchstr(uint64, char*, int);
+extern  int             fetchaddr(uint64, uint64*);
+extern  void            syscall();
 
 // trap.c
-extern uint     ticks;
-void            trapinit(void);
-void            trapinithart(void);
-extern struct spinlock tickslock;
-void            prepare_return(void);
+extern  uint   ticks;
+extern  void            trapinit(void);
+extern  void            trapinithart(void);
+extern  struct spinlock tickslock;
+extern  void            prepare_return(void);
 
 // uart.c
-void            uartinit(void);
-void            uartintr(void);
-void            uartwrite(char [], int);
-void            uartputc_sync(int);
-int             uartgetc(void);
+extern  void            uartinit(void);
+extern  void            uartintr(void);
+extern  void            uartwrite(char [], int);
+extern  void            uartputc_sync(int);
+extern  int             uartgetc(void);
 
 // vm.c
-void            kvminit(void);
-void            kvminithart(void);
-void            kvmmap(pagetable_t, uint64, uint64, uint64, int);
-int             mappages(pagetable_t, uint64, uint64, uint64, int);
-pagetable_t     uvmcreate(void);
-uint64          uvmalloc(pagetable_t, uint64, uint64, int);
-uint64          uvmdealloc(pagetable_t, uint64, uint64);
-int             uvmcopy(pagetable_t, pagetable_t, uint64);
-void            uvmfree(pagetable_t, uint64);
-void            uvmunmap(pagetable_t, uint64, uint64, int);
-void            uvmclear(pagetable_t, uint64);
-pte_t *         walk(pagetable_t, uint64, int);
-uint64          walkaddr(pagetable_t, uint64);
-int             copyout(pagetable_t, uint64, char *, uint64);
-int             copyin(pagetable_t, char *, uint64, uint64);
-int             copyinstr(pagetable_t, char *, uint64, uint64);
-int             ismapped(pagetable_t, uint64);
-uint64          vmfault(pagetable_t, uint64, int);
+extern  void            kvminit(void);
+extern  void            kvminithart(void);
+extern  void            kvmmap(pagetable_t, uint64, uint64, uint64, int);
+extern  int             mappages(pagetable_t, uint64, uint64, uint64, int);
+extern  pagetable_t     uvmcreate(void);
+extern  uint64          uvmalloc(pagetable_t, uint64, uint64, int);
+extern  uint64          uvmdealloc(pagetable_t, uint64, uint64);
+extern  int             uvmcopy(pagetable_t, pagetable_t, uint64);
+extern  void            uvmfree(pagetable_t, uint64);
+extern  void            uvmunmap(pagetable_t, uint64, uint64, int);
+extern  void            uvmclear(pagetable_t, uint64);
+extern  pte_t *         walk(pagetable_t, uint64, int);
+extern  uint64          walkaddr(pagetable_t, uint64);
+extern  int             copyout(pagetable_t, uint64, char *, uint64);
+extern  int             copyin(pagetable_t, char *, uint64, uint64);
+extern  int             copyinstr(pagetable_t, char *, uint64, uint64);
+extern  int             ismapped(pagetable_t, uint64);
+extern  uint64          vmfault(pagetable_t, uint64, int);
 
 // plic.c
-void            plicinit(void);
-void            plicinithart(void);
-int             plic_claim(void);
-void            plic_complete(int);
+extern  void            plicinit(void);
+extern  void            plicinithart(void);
+extern  int             plic_claim(void);
+extern  void            plic_complete(int);
 
 // virtio_disk.c
-void            virtio_disk_init(void);
-void            virtio_disk_rw(struct buf *, int);
-void            virtio_disk_intr(void);
+extern  void            virtio_disk_init(void);
+extern  void            virtio_disk_rw(struct buf *, int);
+extern  void            virtio_disk_intr(void);
+
+// kasserts.c
+extern  void            run_asserts(void);
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))

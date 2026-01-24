@@ -117,6 +117,7 @@ kernel_init_create(void)
   reaper->context.sp = reaper->kstack + PGSIZE;
   reaper->state = RUNNABLE;
   reaper->intended_state = INTENDED_S;
+  memmove(&reaper->name, (void*)"kreap", 6);
   
   printf("kernel_init_create: Preparing kernel execution context\n");
   extern void kernelvec(void);
