@@ -178,3 +178,33 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+uint64 sys_disconn(void)
+{
+  int pid;
+  argint(0, &pid);
+
+  if (pid < 0) return -1;
+
+  struct proc *p = NULL;
+
+  if (pid == 0)  p = myproc();
+  else {
+    for (uint64 i = 0; i < NPROC; i++) {
+      struct proc *process = &proc[i];
+      if (process->pid == pid) p = process;
+    }
+  }
+  if (p == NULL)  return -1;
+
+  extern struct spinlock wait_lock;
+
+  acquire(&wait_lock);
+  p->orig_parent = p->parent;
+  p->parent = 0;
+  release(&wait_lock);
+  yield();
+  wakeup(p->orig_parent);
+
+  return 0;
+}

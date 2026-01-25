@@ -12,10 +12,6 @@ extern struct spinlock wait_lock;
 
 extern void kernel_reaper_main(void);
 
-static uint64 child_pids[NPROC];
-
-struct spinlock access_lock;
-
 struct proc *kernel_init_proc = 0x0;
 
 
@@ -61,34 +57,6 @@ kwait_nonblocking(uint64 addr)
   return 0;   // children exist, none exited yet
 }
 
-
-
-uint64*
-get_child_pids(void)
-{
-  uint64* base = (uint64*)kalloc();
-  struct proc *p = myproc();
-  uint64 va = PGROUNDUP(p->sz);
-  p->sz = va + PGSIZE;
-  if (mappages(p->pagetable, va, PGSIZE, (uint64)base, PTE_V | PTE_U | PTE_R) < 0) {
-    kfree(base);
-    p->sz = va;
-    return 0x0;
-  }
-  
-  acquire(&access_lock);
-  uint64 base_i = 0;
-  for (uint64 i = 0; i < NPROC; i++) {
-    if (child_pids[i] != 0) {
-      base[base_i] = child_pids[i];
-      base_i++;
-    }
-  }
-  release(&access_lock);
-
-  return (uint64*)va;
-}
-
 void
 ksleep(int ticks_to_sleep)
 {
@@ -106,8 +74,6 @@ ksleep(int ticks_to_sleep)
 void
 kernel_init_create(void)
 {
-  initlock(&access_lock, "access_lock");
-
   printf("kernel_init_create: Initialising process\n");
   struct proc *reaper;
   reaper = proc_create();
@@ -138,28 +104,14 @@ void
 kernel_reaper_main(void)
 {
 
-  uint64 my_pid = myproc()->pid;
+  printf("Starting kernel_reaper\n");
+
+  //uint64 my_pid = myproc()->pid;
 
   for(;;){
     int result = kwait_nonblocking(0);
     if (result == -1) {
-      ksleep(10);
+      //ksleep(10);
     }
-
-    acquire(&access_lock);
-    acquire(&wait_lock);
-    for (uint64 i = 0; i < NPROC; i++) {
-      if (proc[i].pid == my_pid) continue;
-      //acquire(&proc[i].lock);
-      if (proc[i].parent == 0x0) {continue;};
-      if (proc[i].parent->pid == my_pid) {
-        child_pids[i] = proc[i].pid;
-      } else {
-        child_pids[i] = 0;
-      }
-      //release(&proc[i].lock);
-    }
-    release(&access_lock);
-    release(&wait_lock);
   }
 }

@@ -355,6 +355,11 @@ kexit(int status)
   if(p == kernel_init_proc)
     panic("kernel_init exiting");
 
+  acquire(&wait_lock);
+  if(p->parent == 0)  // if the process is disconnected (parent==0), reparent it to kernel_init
+    p->parent = kernel_init_proc;
+  release(&wait_lock);
+
   // Close all open files.
   for(int fd = 0; fd < NOFILE; fd++){
     if(p->ofile[fd]){

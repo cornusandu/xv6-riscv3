@@ -44,3 +44,4 @@ entry("pause");
 entry("uptime");
 entry("ps");
 entry("pinfo");
+entry("disconn");

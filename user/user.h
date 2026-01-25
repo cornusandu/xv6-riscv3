@@ -38,6 +38,7 @@ int pause(int);
 int uptime(void);
 int ps(int* result, uint64 max_results);
 int pinfo(int pid, struct procdata* result);
+int disconn(int pid);
 
 // ulib.c
 int stat(const char*, struct stat*);
