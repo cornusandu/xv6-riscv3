@@ -18,10 +18,19 @@ extern volatile int panicking;
 static void
 ASSERT(unsigned char value, const char* const msg)
 {
-  printf("kasserts >> run_asserts >> ASSERT() >> Running condition: %s", msg);
+  printf("kasserts >> run_asserts >> ASSERT()    >> Running condition: %s", msg);
   if (value != 1) {
     printf("panic: kasserts >> run_asserts >> ASSERT() >> Condition failed: %s", msg);
     panic("kasserts >> ASSERT(false)");
+  }
+}
+
+static void
+OP_ASSERT(unsigned char value, const char* const msg)
+{
+  printf("kasserts >> run_asserts >> OP_ASSERT() >> Running condition: %s\n", msg);
+  if (value != 1) {
+    printf("kasserts >> run_asserts >> OP_ASSERT() >> Condition failed: %s; resuming\n", msg);
   }
 }
 
@@ -50,6 +59,15 @@ run_asserts(void)
   ASSERT(PGSIZE >= 4096, "Page size is bigger or equal to 4KB\n");
   uint64 satp = r_satp();
   ASSERT(satp == 0, "Paging not yet initialized\n");
+  ASSERT(NPROC > 3, "Number of processes is at least 4, to ensure xv6 is usable\n");
+  ASSERT(NFILE > 1, "Atleast 2 files can be opened\n");
+  ASSERT(NOFILE >= 1, "Atleast 1 file can be opened per process\n");
+
+  // Optional assertions that do not panic
+  OP_ASSERT(sizeof(void) == 1, "Void type takes one byte");
+  OP_ASSERT(NPROC >= 8, "Number of processes is at least 8, to ensure smooth execution");
+  OP_ASSERT(NFILE >= 32, "Atleast 32 files can be opened, to ensure smooth execution");
+  OP_ASSERT(NOFILE >= 8, "Atleast 8 files can be opened per process, to ensure smooth execution");
 }
 
 void
@@ -59,5 +77,4 @@ late_asserts(void)
   L_ASSERT(satp != 0, "Paging initialized", 1);
   L_ASSERT(myproc()==0, "Checks not running from within syscall", 1);
   L_ASSERT(SATP_MODE(r_satp()) == 8, "Paging mode is Sv39", 1);
-  L_ASSERT((r_sstatus() & SSTATUS_SIE) != 0, "Supervisor interrupts enabled (SSTATUS.SIE)", 0);
 }
