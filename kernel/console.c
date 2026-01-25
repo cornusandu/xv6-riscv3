@@ -53,6 +53,8 @@ struct {
   uint e;  // Edit index
 } cons;
 
+struct sleeplock write_lock;
+
 //
 // user write() system calls to the console go here.
 // uses sleep() and UART interrupts.
@@ -60,6 +62,7 @@ struct {
 int
 consolewrite(int user_src, uint64 src, int n)
 {
+  acquiresleep(&write_lock);
   char buf[32]; // move batches from user space to uart.
   int i = 0;
 
@@ -72,6 +75,7 @@ consolewrite(int user_src, uint64 src, int n)
     uartwrite(buf, nn);
     i += nn;
   }
+  releasesleep(&write_lock);
 
   return i;
 }
@@ -188,6 +192,7 @@ void
 consoleinit(void)
 {
   initlock(&cons.lock, "cons");
+  initsleeplock(&write_lock, "cons_write_lock");
 
   uartinit();
 

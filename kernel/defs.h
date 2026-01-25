@@ -190,6 +190,7 @@ extern  void            virtio_disk_intr(void);
 
 // kasserts.c
 extern  void            run_asserts(void);
+extern  void            late_asserts(void);
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))

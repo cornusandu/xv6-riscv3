@@ -49,6 +49,9 @@ main()
     printf("initialized hardware state\n");
     virtio_disk_init(); // emulated hard disk
     printf("initialised emulated hard disk\n");
+
+    late_asserts();
+
     printf("entering userinit()\n");
     userinit();      // first user process
     printf("exiting userinit()\n");
@@ -63,6 +66,7 @@ main()
     kvminithart();    // turn on paging
     trapinithart();   // install kernel trap vector
     plicinithart();   // ask PLIC for device interrupts
+    late_asserts();
   }
 
   scheduler();        

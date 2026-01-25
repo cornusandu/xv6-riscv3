@@ -2,5 +2,9 @@
 
 int main()
 {
-  ...
+  disconn(0);
+
+  printf("Hello!\n");
+
+  exit(0);
 }

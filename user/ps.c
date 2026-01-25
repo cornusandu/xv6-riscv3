@@ -37,6 +37,8 @@ char* center_name(char name[16]) {
 }
 
 int main() {
+  //disconn(0);
+
   int pids[NPROC];
 
   ps(pids, 0);

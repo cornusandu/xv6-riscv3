@@ -40,6 +40,7 @@ filealloc(void)
     }
   }
   release(&ftable.lock);
+  initsleeplock(&f->write_lock, "filewritelock");
   return 0;
 }
 
@@ -139,11 +140,15 @@ filewrite(struct file *f, uint64 addr, int n)
   if(f->writable == 0)
     return -1;
 
+  acquiresleep(&f->write_lock);
+
   if(f->type == FD_PIPE){
     ret = pipewrite(f->pipe, addr, n);
   } else if(f->type == FD_DEVICE){
-    if(f->major < 0 || f->major >= NDEV || !devsw[f->major].write)
+    if(f->major < 0 || f->major >= NDEV || !devsw[f->major].write) {
+      releasesleep(&f->write_lock);
       return -1;
+    }
     ret = devsw[f->major].write(1, addr, n);
   } else if(f->type == FD_INODE){
     // write a few blocks at a time to avoid exceeding
@@ -174,6 +179,8 @@ filewrite(struct file *f, uint64 addr, int n)
   } else {
     panic("filewrite");
   }
+
+  releasesleep(&f->write_lock);
 
   return ret;
 }
