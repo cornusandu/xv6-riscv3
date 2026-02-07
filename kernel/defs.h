@@ -192,5 +192,9 @@ extern  void            virtio_disk_intr(void);
 extern  void            run_asserts(void);
 extern  void            late_asserts(void);
 
+// tty.c
+extern  void            tty_init(void);
+extern  void            tty_putc(char);
+
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))

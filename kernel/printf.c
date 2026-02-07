@@ -46,17 +46,17 @@ printint(long long xx, int base, int sign)
     buf[i++] = '-';
 
   while(--i >= 0)
-    consputc(buf[i]);
+    tty_putc(buf[i]);
 }
 
 static void
 printptr(uint64 x)
 {
   int i;
-  consputc('0');
-  consputc('x');
+  tty_putc('0');
+  tty_putc('x');
   for (i = 0; i < (sizeof(uint64) * 2); i++, x <<= 4)
-    consputc(digits[x >> (sizeof(uint64) * 8 - 4)]);
+    tty_putc(digits[x >> (sizeof(uint64) * 8 - 4)]);
 }
 
 // Print to the console.
@@ -75,7 +75,7 @@ printf(char *fmt, ...)
   va_start(ap, fmt);
   for(i = 0; (cx = fmt[i] & 0xff) != 0; i++){
     if(cx != '%'){
-      consputc(cx);
+      tty_putc(cx);
       continue;
     }
     i++;
@@ -110,20 +110,20 @@ printf(char *fmt, ...)
     } else if(c0 == 'p'){
       printptr(va_arg(ap, uint64));
     } else if(c0 == 'c'){
-      consputc(va_arg(ap, uint));
+      tty_putc(va_arg(ap, uint));
     } else if(c0 == 's'){
       if((s = va_arg(ap, char*)) == 0)
         s = "(null)";
       for(; *s; s++)
-        consputc(*s);
+        tty_putc(*s);
     } else if(c0 == '%'){
-      consputc('%');
+      tty_putc('%');
     } else if(c0 == 0){
       break;
     } else {
       // Print unknown % sequence to draw attention.
-      consputc('%');
-      consputc(c0);
+      tty_putc('%');
+      tty_putc(c0);
     }
 
   }
@@ -138,6 +138,7 @@ printf(char *fmt, ...)
 [[noreturn]] static void
 block(void)
 {
+  intr_off();
   __sync_synchronize();
   for(;;)
     ;
