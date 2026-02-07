@@ -154,6 +154,17 @@ panic(char *s)
   printf("%s\n", s);
   __sync_synchronize();
   panicked = 1; // freeze uart output from other CPUs
+
+  // Attempt to block other cores
+  intr_off();
+  send_panic_ipi();
+
+  // Freeze this core
+  if(__sync_lock_test_and_set(&panicked, 1) == 0){
+    send_panic_ipi();
+    printf("panic: %s\n", s);
+  }
+
   block();
 }
 

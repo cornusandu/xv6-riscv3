@@ -79,6 +79,7 @@ extern  int             printf(char*, ...) __attribute__ ((format (printf, 1, 2)
 extern  void            panic(char*) __attribute__((noreturn));
 extern  void            printfinit(void);
 extern  void            block_if_panic(void);
+extern  volatile int    panicked;
 
 // proc.c
 extern  int               cpuid(void);
@@ -191,6 +192,9 @@ extern  void            virtio_disk_intr(void);
 // kasserts.c
 extern  void            run_asserts(void);
 extern  void            late_asserts(void);
+
+// ipi.c
+extern void             send_panic_ipi(void);
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))
