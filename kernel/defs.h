@@ -79,6 +79,7 @@ extern  int             printf(char*, ...) __attribute__ ((format (printf, 1, 2)
 extern  void            panic(char*) __attribute__((noreturn));
 extern  void            printfinit(void);
 extern  void            block_if_panic(void);
+extern  volatile int    panicked;
 
 // proc.c
 extern  int               cpuid(void);

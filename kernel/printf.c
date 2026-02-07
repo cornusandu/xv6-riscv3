@@ -155,6 +155,7 @@ panic(char *s)
   printf("%s\n", s);
   __sync_synchronize();
   panicked = 1; // freeze uart output from other CPUs
+
   block();
 }
 
