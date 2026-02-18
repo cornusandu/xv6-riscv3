@@ -8,3 +8,4 @@ This fork of xv6 implements:
     - The current process is terminated. If none, panic()
     - When any core attempts to acquire spinlocks previously held by this process, panic()
     - When any core attempts to acqurie sleeplocks previously held by this process, they can steal the sleeplocks
+* implemented assertions to verify valid environment
