@@ -259,16 +259,7 @@ devintr()
     // timer interrupt.
     clockintr();
     return 2;
-  } else if(scause == 0x8000000000000001L){
-    if(panicked){
-      intr_off();
-      for(;;)
-        ;
-    }
-    w_sip(r_sip() & ~2);
-    return 1;
-  }
-  else {
+  } else {
     return 0;
   }
 }

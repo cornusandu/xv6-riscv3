@@ -11,6 +11,7 @@ void
 init_early(void)
 {
   consoleinit();
+  tty_init();
   printfinit();
   printf("\n");
   printf("init_early() called\nEntered early state.\n");

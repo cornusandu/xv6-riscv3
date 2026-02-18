@@ -45,9 +45,14 @@ static int tx_chan;           // &tx_chan is the "wait channel"
 extern volatile int panicking; // from printf.c
 extern volatile int panicked; // from printf.c
 
+static volatile unsigned char uart_already_init = 0;
+
 void
 uartinit(void)
 {
+  if (uart_already_init == 1) return;
+  uart_already_init = 1;
+  
   // disable interrupts.
   WriteReg(IER, 0x00);
 
