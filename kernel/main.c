@@ -6,6 +6,7 @@
 #include "kernel_init.h"
 
 volatile static int started = 0;
+int hart_started[NPROC];
 
 void
 init_early(void)
@@ -13,6 +14,7 @@ init_early(void)
   consoleinit();
   tty_init();
   printfinit();
+  memset((void*)hart_started, 0, NPROC * sizeof(int));
   printf("\n");
   printf("init_early() called\nEntered early state.\n");
   run_asserts();
@@ -22,17 +24,24 @@ void
 init_hardware(void)
 {
   printf("init_hardware: Initialise RAM\n");
+
   kinit();         // physical page allocator
   kvminit();       // create kernel page table
   kvminithart();   // turn on paging
+
   printf("init_hardware: Initialise processes\n");
+
   procinit();      // process table
+
   printf("init_hardware: Initialise interrupts\n");
+
   trapinit();      // trap vectors
   trapinithart();  // install kernel trap vector
   plicinit();      // set up interrupt controller
   plicinithart();  // ask PLIC for device interrupts
+
   printf("init_hardware: Initialise file system\n");
+
   binit();         // buffer cache
   iinit();         // inode table
   fileinit();      // file table
@@ -50,6 +59,7 @@ main()
     printf("initialized hardware state\n");
     virtio_disk_init(); // emulated hard disk
     printf("initialised emulated hard disk\n");
+    hart_started[0] = 1;
 
     late_asserts();
 
@@ -67,6 +77,7 @@ main()
     kvminithart();    // turn on paging
     trapinithart();   // install kernel trap vector
     plicinithart();   // ask PLIC for device interrupts
+    hart_started[cpuid()] = 1;
     late_asserts();
   }
 

@@ -13,7 +13,7 @@ struct proc proc[NPROC];
 
 struct proc *initproc;
 
-int nextpid = 1;
+uint64 nextpid = 1;
 struct spinlock pid_lock;
 
 extern void forkret(void);
@@ -85,6 +85,13 @@ mycpu(void)
   return c;
 }
 
+struct cpu_state*
+mystate(void)
+{
+  struct cpu* c = mycpu();
+  return &c->state;
+}
+
 // Return the current struct proc *, or zero if none.
 struct proc*
 myproc(void)
@@ -104,6 +111,8 @@ allocpid()
   acquire(&pid_lock);
   pid = nextpid;
   nextpid = nextpid + 1;
+  if (nextpid == 0)
+    panic("allocpid: nextpid overflowed\n");
   release(&pid_lock);
 
   return pid;
@@ -509,16 +518,16 @@ sched(void)
 
   if(!holding(&p->lock))
     panic("sched p->lock");
-  if(mycpu()->noff != 1)
+  if(mystate()->noff != 1)
     panic("sched locks");
   if(p->state == RUNNING)
     panic("sched RUNNING");
   if(intr_get())
     panic("sched interruptible");
 
-  intena = mycpu()->intena;
+  intena = mystate()->intena;
   swtch(&p->context, &mycpu()->context);
-  mycpu()->intena = intena;
+  mystate()->intena = intena;
 }
 
 // Give up the CPU for one scheduling round.
@@ -735,7 +744,7 @@ procdump(void)
       state = states[p->state];
     else
       state = "???";
-    printf("%d %s %s", p->pid, state, p->name);
+    printf("%lu %s %s", p->pid, state, p->name);
     printf("\n");
   }
 }

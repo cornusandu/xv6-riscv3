@@ -134,7 +134,8 @@ vprintf(char *fmt, va_list ap)
 
 int printf(char* fmt, ...) {
   va_list ap;
-  va_begin(ap);
+  va_start(ap, fmt);
+
   int r = vprintf(fmt, ap);
   va_end(ap);
   return r;
@@ -143,6 +144,7 @@ int printf(char* fmt, ...) {
 [[noreturn]] static void
 block(void)
 {
+  mystate()->intrap = 0xFFFF;
   intr_off();
   __sync_synchronize();
   for(;;)
@@ -152,6 +154,7 @@ block(void)
 void
 panic(char *s)
 {
+  mystate()->intrap = 0xFFFF;
   __sync_synchronize();
   panicking = 1;
   __sync_synchronize();

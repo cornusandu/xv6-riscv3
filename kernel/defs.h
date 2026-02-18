@@ -93,6 +93,7 @@ extern  int               kkill(int);
 extern  int               killed(struct proc*);
 extern  void              setkilled(struct proc*);
 extern  struct cpu*       mycpu(void);
+extern  struct cpu_state* mystate(void);
 extern  struct proc*      myproc();
 extern  void              procinit(void);
 extern  void              scheduler(void) __attribute__((noreturn));

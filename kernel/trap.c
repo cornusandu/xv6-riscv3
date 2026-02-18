@@ -40,16 +40,20 @@ usertrap(void)
   int which_dev = 0;
 
   struct proc *p = myproc();
+  mystate()->intrap = INTRAP_U;
 
   if(((r_sstatus() & SSTATUS_SPP) != 0)) {
     if (p != 0x0) {
       if (p->intended_state != INTENDED_S) {
-        printf("panic: usertrap: not from user mode (process with INTENDED_U); PID=%d, CPU=%d; proc_name=%s\n", p->pid, cpuid(), p->name);
+        mystate()->intrap = 0xFFFF;
+        printf("panic: usertrap: not from user mode (process with INTENDED_U); PID=%lu, CPU=%d; proc_name=%s\n", p->pid, cpuid(), p->name);
         panic("usertrap: invalid state;");
       }
     }
-    else
+    else {
+      mystate()->intrap = 0xFFFF;
       panic("usertrap: not from user mode (non-process kernel code)");
+    }
   }
 
   // send interrupts and exceptions to kerneltrap(),
@@ -62,12 +66,16 @@ usertrap(void)
   if(r_scause() == 8){
     // system call
 
-    if(killed(p))
+    if(killed(p)) {
+      mystate()->intrap = INTRAP_0;
       kexit(-1);
+    }
 
     // sepc points to the ecall instruction,
     // but we want to return to the next instruction.
     p->trapframe->epc += 4;
+
+    mystate()->intrap = INTRAP_0;
 
     // an interrupt will change sepc, scause, and sstatus,
     // so enable only now that we're done with those registers.
@@ -75,22 +83,29 @@ usertrap(void)
 
     syscall();
   } else if((which_dev = devintr()) != 0){
+    mystate()->intrap = INTRAP_0;
     // ok
   } else if((r_scause() == 15 || r_scause() == 13) &&
             vmfault(p->pagetable, r_stval(), (r_scause() == 13)? 1 : 0) != 0) {
+    mystate()->intrap = INTRAP_0;
     // page fault on lazily-allocated page
   } else {
-    printf("usertrap(): unexpected scause 0x%lx pid=%d\n", r_scause(), p->pid);
+    mystate()->intrap = 0xFFFF;
+    printf("usertrap(): unexpected scause 0x%lx pid=%lu\n", r_scause(), p->pid);
     printf("            sepc=0x%lx stval=0x%lx\n", r_sepc(), r_stval());
     setkilled(p);
   }
 
-  if(killed(p))
+  if(killed(p)) {
+    mystate()->intrap = INTRAP_0;
     kexit(-1);
+  }
 
   // give up the CPU if this is a timer interrupt.
-  if(which_dev == 2)
+  if(which_dev == 2) {
+    mystate()->intrap = INTRAP_0;
     yield();
+  }
 
   prepare_return();
 
@@ -178,6 +193,8 @@ kerneltrap()
   uint64 sepc = r_sepc();
   uint64 sstatus = r_sstatus();
   uint64 scause = r_scause();
+
+  mystate()->intrap = INTRAP_S;
   
   if((sstatus & SSTATUS_SPP) == 0)
     panic("kerneltrap: not from supervisor mode");
@@ -187,15 +204,15 @@ kerneltrap()
   if((which_dev = devintr()) == 0){
     uint64 stval = r_stval();
     if ((scause == 13 || scause == 15) && stval == 0){
-      oops("%s: null pointer dereference", scause == 13 ? "invalid load" : "invalid store");
+      oops("%s: null pointer dereference\n", scause == 13 ? "invalid load" : "invalid store");
     } else if (scause == 13 || scause == 5 || scause == 4)
-      oops("invalid load %s", scause == 4 ? "(misaligned)" : scause == 5 ? "(access)" : "(unknown)");
+      oops("invalid load %s\n", scause == 4 ? "(misaligned)" : scause == 5 ? "(access)" : "(unknown)");
     else if (scause == 15 || scause == 6 || scause == 7)
-      oops("invalid store %s", scause == 6 ? "(misaligned)" : scause == 7 ? "(access)" : "(unknown)");
+      oops("invalid store %s\n", scause == 6 ? "(misaligned)" : scause == 7 ? "(access)" : "(unknown)");
 
     // interrupt or trap from an unknown source
-    printf("scause=0x%lx sepc=0x%lx stval=0x%lx\n", scause, r_sepc(), stval);
-    panic("kerneltrap");
+    oops("scause=0x%lx sepc=0x%lx stval=0x%lx\n", scause, r_sepc(), stval);
+    mystate()->intrap = INTRAP_0;
   }
 
   // give up the CPU if this is a timer interrupt.

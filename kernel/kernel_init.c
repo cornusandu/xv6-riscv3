@@ -110,6 +110,7 @@ kernel_reaper_main(void)
 
   for(;;){
     int result = kwait_nonblocking(0);
+    //*(char*)0=0;   // if you want to test out the effects of a kernel oops
     if (result == -1) {
       //ksleep(10);
     }

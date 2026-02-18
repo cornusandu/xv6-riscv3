@@ -2,4 +2,9 @@ This fork of xv6 implements:
 * sys_ps syscall: Retrieves list of process PIDs
 * sys_pinfo syscall: Retrieves info about a certain process
 * kernel processes (via minimal patching of scheduler and traps)
+    - Also added a kernel-level reaper (although it can be repurposed) that can be used for testing purposes (testing kernel-level scheduling, testing kernel oops's triggered by processes without having to patch system calls)
 * better panic behaviour (other cores will also spin on first printf or syscall)
+* implemented kernel oops
+    - The current process is terminated. If none, panic()
+    - When any core attempts to acquire spinlocks previously held by this process, panic()
+    - When any core attempts to acqurie sleeplocks previously held by this process, they can steal the sleeplocks

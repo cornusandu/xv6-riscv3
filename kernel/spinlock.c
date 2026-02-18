@@ -8,12 +8,15 @@
 #include "proc.h"
 #include "defs.h"
 
+extern int hart_started[NPROC];
+
 void
 initlock(struct spinlock *lk, char *name)
 {
   lk->name = name;
   lk->locked = 0;
   lk->cpu = 0;
+  lk->cpu_invalid = 0;
 }
 
 // Acquire the lock.
@@ -23,7 +26,7 @@ acquire(struct spinlock *lk)
 {
   push_off(); // disable interrupts to avoid deadlock.
   if(holding(lk)) {
-    printf("panic: acquire lock=%s; cpu=%d; pid=%d;\n",
+    printf("panic: acquire lock=%s; cpu=%d; pid=%lu;\n",
         lk->name, cpuid(), myproc() ? myproc()->pid : -1);
     
     panic("acquire");
@@ -33,8 +36,12 @@ acquire(struct spinlock *lk)
   //   a5 = 1
   //   s1 = &lk->locked
   //   amoswap.w.aq a5, a5, (s1)
-  while(__sync_lock_test_and_set(&lk->locked, 1) != 0)
-    ;
+  while(__sync_lock_test_and_set(&lk->locked, 1) != 0) {
+    if (lk->cpu != NULL) {
+      if (lk->cpu_invalid < lk->cpu->state.ninvalid)
+        panic("acquire: a kernel oops occured in the lock owner between its acquisition and the panicking cpu's attempt at acquisition\n");
+    }
+  }
 
   // Tell the C compiler and the processor to not move loads or stores
   // past this point, to ensure that the critical section's memory
@@ -44,6 +51,7 @@ acquire(struct spinlock *lk)
 
   // Record info about lock acquisition for holding() and debugging.
   lk->cpu = mycpu();
+  lk->cpu_invalid = mystate()->ninvalid;
 }
 
 // Release the lock.
@@ -51,7 +59,7 @@ void
 release(struct spinlock *lk)
 {
   if(!holding(lk)) {
-    printf("panic: release | lock=%s; cpu=%d; pid=%d;\n",
+    printf("panic: release | lock=%s; cpu=%d; pid=%lu;\n",
         lk->name, cpuid(), myproc() ? myproc()->pid : -1);
 
     panic("release");
@@ -102,9 +110,9 @@ push_off(void)
   // switch while using mycpu().
   intr_off();
 
-  if(mycpu()->noff == 0)
-    mycpu()->intena = old;
-  mycpu()->noff += 1;
+  if(mystate()->noff == 0)
+    mystate()->intena = old;
+  mystate()->noff += 1;
 }
 
 void
@@ -113,9 +121,9 @@ pop_off(void)
   struct cpu *c = mycpu();
   if(intr_get())
     panic("pop_off - interruptible");
-  if(c->noff < 1)
+  if(c->state.noff < 1)
     panic("pop_off");
-  c->noff -= 1;
-  if(c->noff == 0 && c->intena)
+  c->state.noff -= 1;
+  if(c->state.noff == 0 && c->state.intena)
     intr_on();
 }
