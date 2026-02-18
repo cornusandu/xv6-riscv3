@@ -1,0 +1,5 @@
+This fork of xv6 implements:
+* sys_ps syscall: Retrieves list of process PIDs
+* sys_pinfo syscall: Retrieves info about a certain process
+* kernel processes (via minimal patching of scheduler and traps)
+* better panic behaviour (other cores will also spin on first printf or syscall)

@@ -167,6 +167,8 @@ prepare_return()
   return;
 }
 
+extern void oops(const char* msg, ...);
+
 // interrupts and exceptions from kernel code go here via kernelvec,
 // on whatever the current kernel stack is.
 void 
@@ -183,8 +185,16 @@ kerneltrap()
     panic("kerneltrap: interrupts enabled");
 
   if((which_dev = devintr()) == 0){
+    uint64 stval = r_stval();
+    if ((scause == 13 || scause == 15) && stval == 0){
+      oops("%s: null pointer dereference", scause == 13 ? "invalid load" : "invalid store");
+    } else if (scause == 13 || scause == 5 || scause == 4)
+      oops("invalid load %s", scause == 4 ? "(misaligned)" : scause == 5 ? "(access)" : "(unknown)");
+    else if (scause == 15 || scause == 6 || scause == 7)
+      oops("invalid store %s", scause == 6 ? "(misaligned)" : scause == 7 ? "(access)" : "(unknown)");
+
     // interrupt or trap from an unknown source
-    printf("scause=0x%lx sepc=0x%lx stval=0x%lx\n", scause, r_sepc(), r_stval());
+    printf("scause=0x%lx sepc=0x%lx stval=0x%lx\n", scause, r_sepc(), stval);
     panic("kerneltrap");
   }
 

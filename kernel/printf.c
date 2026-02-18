@@ -61,9 +61,8 @@ printptr(uint64 x)
 
 // Print to the console.
 int
-printf(char *fmt, ...)
+vprintf(char *fmt, va_list ap)
 {
-  va_list ap;
   int i, cx, c0, c1, c2;
   char *s;
 
@@ -72,7 +71,6 @@ printf(char *fmt, ...)
   if(panicking == 0)
     acquire(&pr.lock);
 
-  va_start(ap, fmt);
   for(i = 0; (cx = fmt[i] & 0xff) != 0; i++){
     if(cx != '%'){
       consputc(cx);
@@ -127,12 +125,19 @@ printf(char *fmt, ...)
     }
 
   }
-  va_end(ap);
 
   if(panicking == 0)
     release(&pr.lock);
 
   return 0;
+}
+
+int printf(char* fmt, ...) {
+  va_list ap;
+  va_begin(ap);
+  int r = vprintf(fmt, ap);
+  va_end(ap);
+  return r;
 }
 
 [[noreturn]] static void
